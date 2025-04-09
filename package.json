@@ -1,0 +1,22 @@
+{
+  "name": "@ares/scd",
+  "version": "1.0.0",
+  "description": "Source, compilation and distribution management",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "source",
+    "code",
+    "compilation",
+    "distribution",
+    "deploy"
+  ],
+  "author": "Roberto Stefani",
+  "license": "MIT",
+  "dependencies": {
+    "@ares/core": "git+https://github.com/rstefani87info/ares-core.git#master",
+    "axios": "^1.7.2"
+  }
+}
