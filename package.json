@@ -3,8 +3,32 @@
   "version": "1.0.0",
   "description": "Source, compilation and distribution management",
   "main": "index.js",
+  "type": "module",
+  "bin": {
+    "ares-scd": "./cli.js"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./index": "./index.js",
+    "./index.js": "./index.js",
+    "./application": "./application.js",
+    "./application.js": "./application.js",
+    "./build-manager": "./build-manager.js",
+    "./build-manager.js": "./build-manager.js",
+    "./deploy-manager": "./deploy-manager.js",
+    "./deploy-manager.js": "./deploy-manager.js",
+    "./git": "./git.js",
+    "./git.js": "./git.js",
+    "./git-flow": "./git-flow.js",
+    "./git-flow.js": "./git-flow.js",
+    "./programming": "./programming.js",
+    "./programming.js": "./programming.js",
+    "./cli": "./cli.js",
+    "./cli.js": "./cli.js",
+    "./package.json": "./package.json"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test ./test/*.test.js"
   },
   "keywords": [
     "source",
@@ -16,7 +40,6 @@
   "author": "Roberto Stefani",
   "license": "MIT",
   "dependencies": {
-    "@ares/core": "git+https://github.com/rstefani87info/ares-core.git#master",
     "axios": "^1.7.2"
   }
 }

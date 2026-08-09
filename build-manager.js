@@ -1,8 +1,22 @@
 import { exec } from "child_process";
-import path from "path";
 import fs from "fs";
+import path from "path";
 
-class BuildManager {
+function run(command, options = {}) {
+  return new Promise((resolve, reject) => {
+    exec(command, options, (error, stdout, stderr) => {
+      if (error) {
+        error.stdout = stdout;
+        error.stderr = stderr;
+        reject(error);
+        return;
+      }
+      resolve({ stdout, stderr });
+    });
+  });
+}
+
+export class BuildManager {
   constructor(application) {
     this.application = application;
     this.buildPath = application.buildingPath;
@@ -11,105 +25,36 @@ class BuildManager {
   }
 
   loadBuildConfig(configPath) {
-    try {
-      const configData = fs.readFileSync(configPath, "utf8");
-      this.buildConfig = JSON.parse(configData);
-      return true;
-    } catch (error) {
-      console.error(`Error loading build configuration: ${error.message}`);
-      return false;
-    }
+    this.buildConfig = JSON.parse(fs.readFileSync(configPath, "utf8"));
+    return this.buildConfig;
   }
 
-  build(type = "development") {
-    if (!this.buildConfig) {
-      console.error("Build configuration not loaded");
-      return false;
-    }
+  async build(type = "development") {
+    if (!this.buildConfig) throw new Error("Build configuration not loaded");
 
     const buildScript = this.buildConfig[type];
-    if (!buildScript) {
-      console.error(`Build type '${type}' not defined in configuration`);
-      return false;
-    }
+    if (!buildScript) throw new Error(`Build type '${type}' not defined in configuration`);
 
-    return new Promise((resolve, reject) => {
-      console.log(`Starting ${type} build...`);
-
-      exec(buildScript, { cwd: this.sourcePath }, (error, stdout, stderr) => {
-        if (error) {
-          console.error(`Build error: ${error.message}`);
-          reject(error);
-          return;
-        }
-
-        if (stdout) {
-          console.log(`Build output: ${stdout}`);
-        }
-
-        if (stderr) {
-          console.warn(`Build warnings: ${stderr}`);
-        }
-
-        console.log(`${type} build completed successfully`);
-        resolve(true);
-      });
-    });
+    return run(buildScript, { cwd: this.sourcePath });
   }
 
-  copyToBuildDirectory(outputDir = "") {
+  async copyToBuildDirectory(outputDir = "") {
+    if (!this.buildConfig) throw new Error("Build configuration not loaded");
+
+    const sourceDir = path.join(this.sourcePath, this.buildConfig.outputDir || "");
     const targetDir = path.join(this.buildPath, outputDir);
 
-    if (!fs.existsSync(targetDir)) {
-      fs.mkdirSync(targetDir, { recursive: true });
-    }
-
-    return new Promise((resolve, reject) => {
-      const sourceDir = path.join(
-        this.sourcePath,
-        this.buildConfig.outputDir || ""
-      );
-
-      exec(
-        `xcopy "${sourceDir}" "${targetDir}" /E /I /Y`,
-        (error, stdout, stderr) => {
-          if (error) {
-            console.error(`Error copying build files: ${error.message}`);
-            reject(error);
-            return;
-          }
-
-          console.log(`Build files copied to ${targetDir}`);
-          resolve(true);
-        }
-      );
-    });
+    fs.mkdirSync(targetDir, { recursive: true });
+    await fs.promises.cp(sourceDir, targetDir, { recursive: true, force: true });
+    return targetDir;
   }
 
-  runTests() {
-    if (!this.buildConfig || !this.buildConfig.testCommand) {
-      console.error("Test command not defined in build configuration");
-      return false;
+  async runTests() {
+    if (!this.buildConfig?.testCommand) {
+      throw new Error("Test command not defined in build configuration");
     }
 
-    return new Promise((resolve, reject) => {
-      console.log("Running tests...");
-
-      exec(
-        this.buildConfig.testCommand,
-        { cwd: this.sourcePath },
-        (error, stdout, stderr) => {
-          if (error) {
-            console.error(`Test error: ${error.message}`);
-            reject(error);
-            return;
-          }
-
-          console.log(`Test output: ${stdout}`);
-          resolve(true);
-        }
-      );
-    });
+    return run(this.buildConfig.testCommand, { cwd: this.sourcePath });
   }
 }
 

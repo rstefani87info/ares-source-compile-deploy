@@ -1,105 +1,74 @@
-import { Repository } from './git';
-
-class GitFlow {
-  constructor(repository) {
+export class GitFlow {
+  constructor(repository, options = {}) {
     this.repository = repository;
-    this.mainBranch = 'main';
-    this.developBranch = 'develop';
-    this.featurePrefix = 'feature/';
-    this.releasePrefix = 'release/';
-    this.hotfixPrefix = 'hotfix/';
+    this.mainBranch = options.mainBranch ?? "main";
+    this.developBranch = options.developBranch ?? "develop";
+    this.featurePrefix = options.featurePrefix ?? "feature/";
+    this.releasePrefix = options.releasePrefix ?? "release/";
+    this.hotfixPrefix = options.hotfixPrefix ?? "hotfix/";
   }
 
-  initFlow() {
-    this.repository.init();
-    this.repository.exec(`checkout -b ${this.mainBranch}`, () => {
-      this.repository.exec(`checkout -b ${this.developBranch}`, () => {
-        console.log(`GitFlow initialized with ${this.mainBranch} and ${this.developBranch} branches`);
-      });
-    });
+  async initFlow() {
+    await this.repository.init();
+    await this.repository.checkout("-b", this.mainBranch);
+    await this.repository.checkout("-b", this.developBranch);
+    return {
+      mainBranch: this.mainBranch,
+      developBranch: this.developBranch,
+    };
   }
 
-  startFeature(featureName) {
-    const branchName = `${this.featurePrefix}${featureName}`;
-    this.repository.exec(`checkout -b ${branchName} ${this.developBranch}`, (error) => {
-      if (!error) {
-        console.log(`Feature branch ${branchName} created from ${this.developBranch}`);
-      }
-    });
+  async startFeature(featureName) {
+    const branchName = this.normalizeBranchName(featureName, this.featurePrefix);
+    await this.repository.git(["checkout", "-b", branchName, this.developBranch]);
     return branchName;
   }
 
-  finishFeature(featureName) {
-    const branchName = featureName.startsWith(this.featurePrefix) 
-      ? featureName 
-      : `${this.featurePrefix}${featureName}`;
-    
-    this.repository.exec(`checkout ${this.developBranch}`, () => {
-      this.repository.merge(branchName, this.developBranch);
-      this.repository.exec(`branch -d ${branchName}`, () => {
-        console.log(`Feature ${featureName} merged into ${this.developBranch} and branch deleted`);
-      });
-    });
-  }
-
-  startRelease(version) {
-    const branchName = `${this.releasePrefix}${version}`;
-    this.repository.exec(`checkout -b ${branchName} ${this.developBranch}`, (error) => {
-      if (!error) {
-        console.log(`Release branch ${branchName} created from ${this.developBranch}`);
-      }
-    });
+  async finishFeature(featureName) {
+    const branchName = this.normalizeBranchName(featureName, this.featurePrefix);
+    await this.repository.checkout(this.developBranch);
+    await this.repository.merge(branchName);
+    await this.repository.git(["branch", "-d", branchName]);
     return branchName;
   }
 
-  finishRelease(version) {
-    const branchName = version.startsWith(this.releasePrefix) 
-      ? version 
-      : `${this.releasePrefix}${version}`;
-    
-    this.repository.exec(`checkout ${this.mainBranch}`, () => {
-      this.repository.merge(branchName, this.mainBranch);
-      
-      this.repository.tag(version, `Release ${version}`);
-      
-      this.repository.exec(`checkout ${this.developBranch}`, () => {
-        this.repository.merge(branchName, this.developBranch);
-        
-        this.repository.exec(`branch -d ${branchName}`, () => {
-          console.log(`Release ${version} completed and merged into ${this.mainBranch} and ${this.developBranch}`);
-        });
-      });
-    });
-  }
-
-  startHotfix(version) {
-    const branchName = `${this.hotfixPrefix}${version}`;
-    this.repository.exec(`checkout -b ${branchName} ${this.mainBranch}`, (error) => {
-      if (!error) {
-        console.log(`Hotfix branch ${branchName} created from ${this.mainBranch}`);
-      }
-    });
+  async startRelease(version) {
+    const branchName = this.normalizeBranchName(version, this.releasePrefix);
+    await this.repository.git(["checkout", "-b", branchName, this.developBranch]);
     return branchName;
   }
 
-  finishHotfix(version) {
-    const branchName = version.startsWith(this.hotfixPrefix) 
-      ? version 
-      : `${this.hotfixPrefix}${version}`;
-    
-    this.repository.exec(`checkout ${this.mainBranch}`, () => {
-      this.repository.merge(branchName, this.mainBranch);
-      
-      this.repository.tag(`hotfix-${version}`, `Hotfix ${version}`);
-      
-      this.repository.exec(`checkout ${this.developBranch}`, () => {
-        this.repository.merge(branchName, this.developBranch);
-        
-        this.repository.exec(`branch -d ${branchName}`, () => {
-          console.log(`Hotfix ${version} completed and merged into ${this.mainBranch} and ${this.developBranch}`);
-        });
-      });
-    });
+  async finishRelease(version) {
+    const branchName = this.normalizeBranchName(version, this.releasePrefix);
+    await this.repository.checkout(this.mainBranch);
+    await this.repository.merge(branchName);
+    await this.repository.tag(version, `Release ${version}`);
+    await this.repository.checkout(this.developBranch);
+    await this.repository.merge(branchName);
+    await this.repository.git(["branch", "-d", branchName]);
+    return branchName;
+  }
+
+  async startHotfix(version) {
+    const branchName = this.normalizeBranchName(version, this.hotfixPrefix);
+    await this.repository.git(["checkout", "-b", branchName, this.mainBranch]);
+    return branchName;
+  }
+
+  async finishHotfix(version) {
+    const branchName = this.normalizeBranchName(version, this.hotfixPrefix);
+    await this.repository.checkout(this.mainBranch);
+    await this.repository.merge(branchName);
+    await this.repository.tag(`hotfix-${version}`, `Hotfix ${version}`);
+    await this.repository.checkout(this.developBranch);
+    await this.repository.merge(branchName);
+    await this.repository.git(["branch", "-d", branchName]);
+    return branchName;
+  }
+
+  normalizeBranchName(name, prefix) {
+    if (!name) throw new Error("Branch name is required");
+    return String(name).startsWith(prefix) ? String(name) : `${prefix}${name}`;
   }
 }
 

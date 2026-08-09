@@ -1,471 +1,252 @@
-import { exec } from "child_process";
+import { execFile } from "child_process";
 import axios from "axios";
-import { chooseMessage } from "@ares/core/i18n.js";
 
-const vocabulary = {
+const messages = {
   it: {
-    invalidRepositoryName: "Il nome del repository è obbligatorio",
-    invalidUser: "L'utente è obbligatorio",
-    invalidAccessToken: "Il token di accesso è obbligatorio",
-    invalidDescription: "La descrizione del repository è obbligatoria",
-    invalidUrl: "L'URL del repository è obbligatoria",
-    invalidLicense: "La licenza del repository è obbligatoria",
-    invalidDefaultBranch: "La branch di default del repository è obbligatoria",
     repositoryCreated: "Repository creato con successo",
     repositoryCloned: "Repository clonato con successo",
     repositoryUpdated: "Repository aggiornato con successo",
-    repositoryDeleted: "Repository eliminato con successo",
     errorCreatingRepository: "Errore durante la creazione del repository",
     errorCloningRepository: "Errore durante il clonaggio del repository",
     errorUpdatingRepository: "Errore durante l'aggiornamento del repository",
-    errorDeletingRepository: "Errore durante l'eliminazione del repository",
   },
   en: {
-    invalidRepositoryName: "Repository name is required",
-    invalidUser: "User is required",
-    invalidAccessToken: "Access token is required",
-    invalidDescription: "Repository description is required",
-    invalidUrl: "Repository URL is required",
-    invalidLicense: "Repository license is required",
-    invalidDefaultBranch: "Repository default branch is required",
     repositoryCreated: "Repository created successfully",
     repositoryCloned: "Repository cloned successfully",
     repositoryUpdated: "Repository updated successfully",
-    repositoryDeleted: "Repository deleted successfully",
     errorCreatingRepository: "Error creating repository",
     errorCloningRepository: "Error cloning repository",
     errorUpdatingRepository: "Error updating repository",
-    errorDeletingRepository: "Error deleting repository",
   },
 };
+
+function choose(language, key) {
+  return messages[language]?.[key] ?? messages.en[key] ?? key;
+}
+
+function parseCommand(command) {
+  if (Array.isArray(command)) return command.map(String);
+  return String(command)
+    .match(/"[^"]*"|'[^']*'|\S+/g)
+    ?.map((part) => part.replace(/^["']|["']$/g, "")) ?? [];
+}
+
+function run(command, args, options = {}) {
+  return new Promise((resolve, reject) => {
+    execFile(command, args, options, (error, stdout, stderr) => {
+      if (error) {
+        error.stdout = stdout;
+        error.stderr = stderr;
+        reject(error);
+        return;
+      }
+      resolve({ stdout, stderr });
+    });
+  });
+}
 
 export class Repository {
   constructor(
     name,
     path,
     user,
-    description = null,
-    url = null,
+    description = "",
+    url = "",
     isPrivate = false,
     license = null,
     accessToken = null,
-    defaultBranch = null,
+    defaultBranch = "main",
     language = "en"
   ) {
-    this.name = name.toLower();
+    if (!name) throw new Error("Repository name is required");
+    if (!path) throw new Error("Repository path is required");
+
+    this.name = String(name).toLowerCase();
     this.path = path;
     this.user = user;
-    this.description = description;
+    this.description = description?.en ?? description ?? "";
     this.url = url;
-    this.isPrivate = isPrivate;
+    this.isPrivate = Boolean(isPrivate);
     this.license = license;
     this.accessToken = accessToken;
-    this.defaultBranch = defaultBranch;
-    this.language = language in vocabulary ? language : "en";
-
+    this.defaultBranch = defaultBranch ?? "main";
+    this.language = language in messages ? language : "en";
     this.stashList = [];
     this.branchList = [];
   }
-  
-  // Remove the getMessage helper method and use chooseMessage instead
-  
-  createOnGitHub() {
-    const data = {
-      name: this.name,
-      description: this.description,
-      private: this.isPrivate,
-      auto_init: true,
-      license: this.license,
-    };
 
-    const options = {
-      headers: {
-        Authorization: `Bearer ${this.accessToken}`,
-      },
-    };
-
-    axios
-      .post("https://api.github.com/repos", data, options)
-      .then((response) => {
-        console.log(chooseMessage(this.language, vocabulary, "repositoryCreated"), response.data);
-      })
-      .catch((error) => {
-        console.error(chooseMessage(this.language, vocabulary, "errorCreatingRepository"), error.response.data);
-      });
-    return `https://github.com/${user}/${repositoryName}`;
+  message(key) {
+    return choose(this.language, key);
   }
-  createOnBitbucket() {
-    const data = {
-      name: this.name,
-      description: this.description,
-      private: this.isPrivate,
-      scm: "git",
-      owner: {
-        username: this.user,
-      },
-      license: this.license,
-    };
-    const options = {
-      headers: {
-        Authorization: `Bearer ${this.accessToken}`,
-      },
-    };
 
-    axios
-      .post("https://api.bitbucket.org/api/2.0/repositories", data, options)
-      .then((response) => {
-        console.log(chooseMessage(this.language, vocabulary, "repositoryCreated"), response.data);
-      })
-      .catch((error) => {
-        console.error(chooseMessage(this.language, vocabulary, "errorCreatingRepository"), error.response.data);
-      });
-    return `https://bitbucket.org/${user}/${repositoryName}`;
+  async git(args, { cwd = this.path, callback = null } = {}) {
+    const normalizedArgs = parseCommand(args);
+    try {
+      const result = await run("git", normalizedArgs, { cwd });
+      callback?.(null, result.stdout, result.stderr);
+      return result;
+    } catch (error) {
+      callback?.(error, error.stdout ?? "", error.stderr ?? "");
+      throw error;
+    }
   }
+
+  exec(command, callback) {
+    return this.git(command, { callback });
+  }
+
+  async createOnGitHub() {
+    if (!this.accessToken) throw new Error("GitHub access token is required");
+
+    const response = await axios.post(
+      "https://api.github.com/user/repos",
+      {
+        name: this.name,
+        description: this.description,
+        private: this.isPrivate,
+        auto_init: true,
+        license_template: this.license ?? undefined,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${this.accessToken}`,
+          Accept: "application/vnd.github+json",
+        },
+      }
+    );
+
+    this.url = response.data.clone_url ?? response.data.html_url;
+    return response.data;
+  }
+
+  async createOnBitbucket() {
+    if (!this.user) throw new Error("Bitbucket user is required");
+    if (!this.accessToken) throw new Error("Bitbucket access token is required");
+
+    const response = await axios.post(
+      `https://api.bitbucket.org/2.0/repositories/${this.user}/${this.name}`,
+      {
+        scm: "git",
+        is_private: this.isPrivate,
+        description: this.description,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${this.accessToken}`,
+        },
+      }
+    );
+
+    this.url = response.data.links?.clone?.find((link) => link.name === "https")?.href;
+    return response.data;
+  }
+
+  init(targetPath = this.path) {
+    return this.git(["init", targetPath], { cwd: process.cwd() });
+  }
+
   createLocalRepository() {
-    let completePath = (this.path ? this.path + "/" : "") + this.name;
-    this.exec(`init ${completePath}`, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`error: ${error.message}`);
-        return;
-      }
-      if (stdout) {
-        console.log(`stdout: ${stdout}`);
-      }
-
-      if (stderr) {
-        console.error(`stderr: ${stderr}`);
-      }
-    });
+    return this.init(this.path);
   }
 
-  clone() {
-    this.exec(`clone ${this.url} ${this.path}`, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`${chooseMessage(this.language, vocabulary, "errorCloningRepository")}: ${error.message}`);
-        return;
-      }
-      if (stdout) {
-        console.log(chooseMessage(this.language, vocabulary, "repositoryCloned"), stdout);
-      }
-      if (stderr) {
-        console.error(stderr);
-      }
-    });
+  clone(targetPath = this.path) {
+    if (!this.url) throw new Error("Repository URL is required");
+    return this.git(["clone", this.url, targetPath], { cwd: process.cwd() });
   }
 
   add(...paths) {
-    if (paths.length === 0) paths = ".";
-    this.exec(`add ${paths.join(" ")}`, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`error: ${error.message}`);
-        return;
-      }
-      if (stdout) {
-        console.log(`stdout: ${stdout}`);
-      }
-
-      if (stderr) {
-        console.error(`stderr: ${stderr}`);
-      }
-    });
+    return this.git(["add", ...(paths.length ? paths : ["."])]);
   }
 
   commit(message) {
-    this.exec(`commit -m "${message}"`, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`error: ${error.message}`);
-        return;
-      }
-      if (stdout) {
-        console.log(`stdout: ${stdout}`);
-      }
-
-      if (stderr) {
-        console.error(`stderr: ${stderr}`);
-      }
-    });
+    if (!message) throw new Error("Commit message is required");
+    return this.git(["commit", "-m", message]);
   }
 
-  push(branch = null) {
-    if (!branch) branch = this.defaultBranch;
-    this.exec(`push -u origin ${branch}`, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`error: ${error.message}`);
-        return;
-      }
-      if (stdout) {
-        console.log(`stdout: ${stdout}`);
-      }
-
-      if (stderr) {
-        console.error(`stderr: ${stderr}`);
-      }
-    });
+  push(branch = this.defaultBranch) {
+    return this.git(["push", "-u", "origin", branch]);
   }
 
   pull() {
-    this.exec(`pull`, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`error: ${error.message}`);
-        return;
-      }
-      if (stdout) {
-        console.log(`stdout: ${stdout}`);
-      }
-
-      if (stderr) {
-        console.error(`stderr: ${stderr}`);
-      }
-    });
+    return this.git(["pull"]);
   }
 
   fetch() {
-    this.exec(`fetch`, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`error: ${error.message}`);
-        return;
-      }
-      if (stdout) {
-        console.log(`stdout: ${stdout}`);
-      }
-
-      if (stderr) {
-        console.error(`stderr: ${stderr}`);
-      }
-    });
+    return this.git(["fetch"]);
   }
+
   delete(...paths) {
-    if (paths.length === 0) paths = ".";
-    this.exec(`rm -r ${paths.join(" ")}`, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`error: ${error.message}`);
-        return;
-      }
-      if (stdout) {
-        console.log(`stdout: ${stdout}`);
-      }
-      if (stderr) {
-        console.error(`stderr: ${stderr}`);
-      }
-    });
+    return this.git(["rm", "-r", ...(paths.length ? paths : ["."])]);
   }
 
-  checkout(branch = null, ...paths) {
-    if (!branch) branch = this.defaultBranch;
-    if (paths.length === 0) paths = ".";
-    this.exec(
-      `git checkout ${branch} ${paths.join(" ")}`,
-      (error, stdout, stderr) => {
-        if (error) {
-          console.error(`error: ${error.message}`);
-          return;
-        }
-        if (stdout) {
-          console.log(`stdout: ${stdout}`);
-        }
-        if (stderr) {
-          console.error(`stderr: ${stderr}`);
-        }
-      }
-    );
+  checkout(branch = this.defaultBranch, ...paths) {
+    return this.git(["checkout", branch, ...paths]);
   }
+
+  async loadAllBranches() {
+    const { stdout } = await this.git(["branch", "-a"]);
+    this.branchList = stdout
+      .split(/\r?\n/)
+      .map((branch) => branch.trim())
+      .filter(Boolean);
+    return this.branchList;
+  }
+
   getAllBranches() {
-    return this.branches.map((branch) => branch.replace("*", "").trim());
+    return this.branchList.map((branch) => branch.replace(/^\*\s*/, "").trim());
   }
+
   getCurrentBranch() {
-    return this.branches
-      .where((branch) => branch.includes("*"))
-      .map((branch) => branch.replace("*", "").trim())
-      .pop();
+    return this.branchList
+      .find((branch) => branch.startsWith("*"))
+      ?.replace(/^\*\s*/, "")
+      .trim();
   }
-  loadAllBranches() {
-    this.exec(`branch -a`, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`error: ${error.message}`);
-        return;
-      }
-      if (stdout) {
-        console.log(`stdout: ${stdout}`);
-        this.branches = stdout.split("\n");
-      }
-      if (stderr) {
-        console.error(`stderr: ${stderr}`);
-      }
-    });
+
+  stash(message = null) {
+    return this.git(["stash", ...(message ? ["push", "-m", message] : [])]);
   }
-  stash(message) {
-    this.exec(
-      `git stash ${message ? `-m ${JSON.stringify(message ?? "")}` : ""}`,
-      (error, stdout, stderr) => {
-        if (error) {
-          console.error(`error: ${error.message}`);
-          return;
-        }
-        if (stdout) {
-          console.log(`stdout: ${stdout}`);
-        }
-        if (stderr) {
-          console.error(`stderr: ${stderr}`);
-        }
-      }
-    );
-  }
+
   stashPop() {
-    this.exec(`stash pop`, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`error: ${error.message}`);
-        return;
-      }
-      if (stdout) {
-        console.log(`stdout: ${stdout}`);
-      }
-      if (stderr) {
-        console.error(`stderr: ${stderr}`);
-      }
-    });
+    return this.git(["stash", "pop"]);
   }
 
-  loadStashList() {
-    this.exec(`stash list`, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`error: ${error.message}`);
-        return;
-      }
-      if (stdout) {
-        console.log(`stdout: ${stdout}`);
-        this.stashList = stdout
-          .split("\n")
-          .replaceAll(/stash@\{d+\}: /)
-          .map((stash) => {
-            stash = stash
-              .trim()
-              .replace("wip on ", "")
-              .replace(":", "")
-              .split(" ");
-            stash = {
-              branch: stash[0],
-              message: stash[1],
-              patches: [],
-              loadPatches: () => {
-                this.exec(
-                  `git stash show -p ${stash[0]}`,
-                  (error, stdout, stderr) => {
-                    if (error) {
-                      console.error(`error: ${error.message}`);
-                      return;
-                    }
-                    if (stdout) {
-                      console.log(`stdout: ${stdout}`);
-                      stash.patches = stdout.split("\n");
-                      // TODO split patches in patches per file object
-                    }
-                    if (stderr) {
-                      console.error(`stderr: ${stderr}`);
-                    }
-                  }
-                );
-              },
-            };
-            return stash;
-          });
-      }
-      if (stderr) {
-        console.error(`stderr: ${stderr}`);
-      }
-    });
+  async loadStashList() {
+    const { stdout } = await this.git(["stash", "list"]);
+    this.stashList = stdout
+      .split(/\r?\n/)
+      .filter(Boolean)
+      .map((line) => {
+        const [ref, ...messageParts] = line.split(": ");
+        return {
+          ref,
+          message: messageParts.join(": "),
+          patches: [],
+          loadPatches: async () => {
+            const patch = await this.git(["stash", "show", "-p", ref]);
+            return patch.stdout;
+          },
+        };
+      });
+    return this.stashList;
   }
 
-  init() {
-    this.exec(`init `, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`error: ${error.message}`);
-        return;
-      }
-      if (stdout) {
-        console.log(`stdout: ${stdout}`);
-      }
-      if (stderr) {
-        console.error(`stderr: ${stderr}`);
-      }
-    });
+  tag(name, message = name) {
+    if (!name) throw new Error("Tag name is required");
+    return this.git(["tag", "-a", name, "-m", message]);
   }
 
-  githubCreateAndPull() {}
-
-  exec(command, callback) {
-    exec(`git ${command}`, { cwd: this.path }, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`error: ${error.message}`);
-        return;
-      }
-      if (stdout) {
-        console.log(`stdout: ${stdout}`);
-      }
-      if (stderr) {
-        console.error(`stderr: ${stderr}`);
-      }
-      callback(error, stdout, stderr);
-    });
+  release(name, message = `Release ${name}`) {
+    return this.tag(name, message);
   }
 
-  release(name, message) {
-    this.exec(
-      `git release -a ${name} -m "${message}"`,
-      (error, stdout, stderr) => {
-        if (error) {
-          console.error(`${this.getMessage("errorCreatingRepository")}: ${error.message}`);
-          return;
-        }
-        console.log(`${this.getMessage("repositoryCreated")}: ${name}`);
-      }
-    );
-  }
-
-  merge(fromBranch, toBranch) {
-    this.exec(
-      `git merge ${fromBranch} ${toBranch}`,
-      (error, stdout, stderr) => {
-        if (error) {
-          console.error(`${this.getMessage("errorUpdatingRepository")}: ${error.message}`);
-          return;
-        }
-        console.log(`${this.getMessage("repositoryUpdated")}: ${fromBranch} into ${toBranch}`);
-      }
-    );
-  }
-
-  commit(message) {
-    this.exec(`commit -m "${message}"`, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`${this.getMessage("errorUpdatingRepository")}: ${error.message}`);
-        return;
-      }
-      console.log(`${this.getMessage("repositoryUpdated")}: ${message}`);
-    });
+  merge(fromBranch) {
+    if (!fromBranch) throw new Error("Source branch is required");
+    return this.git(["merge", fromBranch]);
   }
 
   editLastCommit(message) {
-    this.exec(`commit --amend -m "${message}"`, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`${this.getMessage("errorUpdatingRepository")}: ${error.message}`);
-        return;
-      }
-      console.log(`${this.getMessage("repositoryUpdated")}: ${message}`);
-    });
-  }
-
-  tag(name, message) {
-    if (typeof name !== "string" || name.trim() === "") {
-      throw new Error(chooseMessage(this.language, vocabulary, "invalidRepositoryName"));
-    }
-
-    this.exec(`tag -a ${name} -m "${message}"`, (error, stdout, stderr) => {
-      if (error) {
-        throw new Error(
-          `${chooseMessage(this.language, vocabulary, "errorCreatingRepository")}: ${error.message}`
-        );
-      }
-      console.log(`${chooseMessage(this.language, vocabulary, "repositoryCreated")}: ${name}`);
-    });
+    if (!message) throw new Error("Commit message is required");
+    return this.git(["commit", "--amend", "-m", message]);
   }
 }

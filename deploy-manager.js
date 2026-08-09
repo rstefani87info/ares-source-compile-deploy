@@ -1,8 +1,22 @@
 import { exec } from "child_process";
-import path from "path";
 import fs from "fs";
+import path from "path";
 
-class DeployManager {
+function run(command, options = {}) {
+  return new Promise((resolve, reject) => {
+    exec(command, options, (error, stdout, stderr) => {
+      if (error) {
+        error.stdout = stdout;
+        error.stderr = stderr;
+        reject(error);
+        return;
+      }
+      resolve({ stdout, stderr });
+    });
+  });
+}
+
+export class DeployManager {
   constructor(application) {
     this.application = application;
     this.buildPath = application.buildingPath;
@@ -10,177 +24,65 @@ class DeployManager {
   }
 
   loadDeployConfig(configPath) {
-    try {
-      const configData = fs.readFileSync(configPath, "utf8");
-      this.deployConfig = JSON.parse(configData);
-      return true;
-    } catch (error) {
-      console.error(`Error loading deployment configuration: ${error.message}`);
-      return false;
-    }
+    this.deployConfig = JSON.parse(fs.readFileSync(configPath, "utf8"));
+    return this.deployConfig;
   }
 
-  deploy(environment = "staging") {
-    if (!this.deployConfig) {
-      console.error("Deployment configuration not loaded");
-      return false;
-    }
+  async deploy(environment = "staging") {
+    if (!this.deployConfig) throw new Error("Deployment configuration not loaded");
 
-    const envConfig = this.deployConfig.environments[environment];
-    if (!envConfig) {
-      console.error(
-        `Environment '${environment}' not defined in configuration`
-      );
-      return false;
-    }
+    const envConfig = this.deployConfig.environments?.[environment];
+    if (!envConfig) throw new Error(`Environment '${environment}' not defined in configuration`);
 
-    console.log(`Starting deployment to ${environment}...`);
+    await this.executeHooks(envConfig.preDeployHooks);
 
-    if (envConfig.preDeployHooks) {
-      this._executeHooks(envConfig.preDeployHooks);
-    }
-
+    let result;
     switch (envConfig.type) {
-      case "ftp":
-        return this._deployViaFTP(envConfig);
-      case "ssh":
-        return this._deployViaSSH(envConfig);
       case "local":
-        return this._deployToLocalDirectory(envConfig);
+        result = await this.deployToLocalDirectory(envConfig);
+        break;
       case "custom":
-        return this._executeCustomDeployment(envConfig);
+        result = await this.executeCustomDeployment(envConfig);
+        break;
+      case "ftp":
+      case "ssh":
+        result = await this.executeRemoteDeployment(envConfig);
+        break;
       default:
-        console.error(`Unsupported deployment type: ${envConfig.type}`);
-        return Promise.reject(
-          new Error(`Unsupported deployment type: ${envConfig.type}`)
-        );
+        throw new Error(`Unsupported deployment type: ${envConfig.type}`);
     }
+
+    await this.executeHooks(envConfig.postDeployHooks);
+    return result;
   }
 
-  _deployViaFTP(config) {
-    return new Promise((resolve, reject) => {
-      const ftpCommand = `"${path.join(
-        __dirname,
-        "tools",
-        "ftp-deploy.bat"
-      )}" "${this.buildPath}" "${config.host}" "${config.username}" "${
-        config.password
-      }" "${config.remotePath}"`;
-
-      exec(ftpCommand, (error, stdout, stderr) => {
-        if (error) {
-          console.error(`FTP deployment error: ${error.message}`);
-          reject(error);
-          return;
-        }
-
-        console.log(`FTP deployment output: ${stdout}`);
-
-        if (config.postDeployHooks) {
-          this._executeHooks(config.postDeployHooks);
-        }
-
-        console.log(`Deployment to ${config.host} completed successfully`);
-        resolve(true);
-      });
+  async deployToLocalDirectory(config) {
+    if (!config.path) throw new Error("Local deployment path is required");
+    fs.mkdirSync(config.path, { recursive: true });
+    await fs.promises.cp(this.buildPath, config.path, {
+      recursive: true,
+      force: true,
+      filter: (source) => path.resolve(source) !== path.resolve(config.path),
     });
+    return { target: config.path };
   }
 
-  _deployViaSSH(config) {
-    return new Promise((resolve, reject) => {
-      const sshCommand = `"${path.join(
-        __dirname,
-        "tools",
-        "ssh-deploy.bat"
-      )}" "${this.buildPath}" "${config.host}" "${config.username}" "${
-        config.keyFile
-      }" "${config.remotePath}"`;
-
-      exec(sshCommand, (error, stdout, stderr) => {
-        if (error) {
-          console.error(`SSH deployment error: ${error.message}`);
-          reject(error);
-          return;
-        }
-
-        console.log(`SSH deployment output: ${stdout}`);
-
-        if (config.postDeployHooks) {
-          this._executeHooks(config.postDeployHooks);
-        }
-
-        console.log(`Deployment to ${config.host} completed successfully`);
-        resolve(true);
-      });
-    });
+  executeCustomDeployment(config) {
+    if (!config.command) throw new Error("Custom deployment command is required");
+    return run(config.command, { cwd: this.buildPath });
   }
 
-  _deployToLocalDirectory(config) {
-    return new Promise((resolve, reject) => {
-      const targetDir = config.path;
-
-      if (!fs.existsSync(targetDir)) {
-        fs.mkdirSync(targetDir, { recursive: true });
-      }
-
-      exec(
-        `xcopy "${this.buildPath}" "${targetDir}" /E /I /Y`,
-        (error, stdout, stderr) => {
-          if (error) {
-            console.error(`Local deployment error: ${error.message}`);
-            reject(error);
-            return;
-          }
-
-          console.log(`Files deployed to ${targetDir}`);
-
-          if (config.postDeployHooks) {
-            this._executeHooks(config.postDeployHooks);
-          }
-
-          console.log(`Local deployment completed successfully`);
-          resolve(true);
-        }
-      );
-    });
+  executeRemoteDeployment(config) {
+    if (!config.command) {
+      throw new Error(`${config.type} deployment requires an explicit command`);
+    }
+    return run(config.command, { cwd: this.buildPath });
   }
 
-  _executeCustomDeployment(config) {
-    return new Promise((resolve, reject) => {
-      exec(config.command, { cwd: this.buildPath }, (error, stdout, stderr) => {
-        if (error) {
-          console.error(`Custom deployment error: ${error.message}`);
-          reject(error);
-          return;
-        }
-
-        console.log(`Custom deployment output: ${stdout}`);
-
-        if (config.postDeployHooks) {
-          this._executeHooks(config.postDeployHooks);
-        }
-
-        console.log(`Custom deployment completed successfully`);
-        resolve(true);
-      });
-    });
-  }
-
-  _executeHooks(hooks) {
-    hooks.forEach((hook) => {
-      try {
-        exec(hook, { cwd: this.buildPath }, (error, stdout, stderr) => {
-          if (error) {
-            console.error(`Hook execution error: ${error.message}`);
-            return;
-          }
-
-          console.log(`Hook output: ${stdout}`);
-        });
-      } catch (error) {
-        console.error(`Error executing hook: ${error.message}`);
-      }
-    });
+  async executeHooks(hooks = []) {
+    for (const hook of hooks) {
+      await run(hook, { cwd: this.buildPath });
+    }
   }
 }
 
