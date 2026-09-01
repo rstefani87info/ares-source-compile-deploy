@@ -1,0 +1,114 @@
+{
+  "version": "1.0",
+  "title": {
+    "it": "Questionario aReS Core-Dev (Override)",
+    "en": "aReS Core-Dev Questionnaire (Override)"
+  },
+  "introduction": {
+    "it": "Configurazione aggiuntiva per progetti aReS core-dev. Queste domande si aggiungono/sovrascrivono quelle base SCD.",
+    "en": "Additional configuration for aReS core-dev projects. These questions add/override base SCD questions."
+  },
+  "questions": [
+    {
+      "id": 2,
+      "question": {
+        "it": "Quale database userai? (Override core-dev: default MySQL)",
+        "en": "Which database will you use? (core-dev override: default MySQL)"
+      },
+      "type": "single",
+      "options": [
+        { "text": { "it": "MySQL (default core-dev)", "en": "MySQL (core-dev default)" }, "value": "mysql", "order": 1 },
+        { "text": { "it": "PostgreSQL", "en": "PostgreSQL" }, "value": "postgresql", "order": 2 },
+        { "text": { "it": "MongoDB", "en": "MongoDB" }, "value": "mongodb", "order": 3 },
+        { "text": { "it": "SQLite", "en": "SQLite" }, "value": "sqlite", "order": 4 },
+        { "text": { "it": "MariaDB", "en": "MariaDB" }, "value": "mariadb", "order": 3 },
+        { "text": { "it": "Nessuno/Solo file", "en": "None/File only" }, "value": "none", "order": 6 }
+      ],
+      "is_open_ended": false,
+      "required": true,
+      "category": "database"
+    },
+    {
+      "id": 7,
+      "question": {
+        "it": "Quali moduli aReS includere?",
+        "en": "Which aReS modules to include?"
+      },
+      "type": "multiple",
+      "options": [
+        { "text": { "it": "@ares/auth", "en": "@ares/auth" }, "value": "auth", "order": 1 },
+        { "text": { "it": "@ares/datasource-files", "en": "@ares/datasource-files" }, "value": "datasource-files", "order": 2 },
+        { "text": { "it": "@ares/datasource-mysql", "en": "@ares/datasource-mysql" }, "value": "datasource-mysql", "order": 3 },
+        { "text": { "it": "@ares/datasource-mongo", "en": "@ares/datasource-mongo" }, "value": "datasource-mongo", "order": 4 },
+        { "text": { "it": "@ares/ai-3rd-party", "en": "@ares/ai-3rd-party" }, "value": "ai-3rd-party", "order": 5 },
+        { "text": { "it": "@ares/survey", "en": "@ares/survey" }, "value": "survey", "order": 6 }
+      ],
+      "is_open_ended": false,
+      "required": false,
+      "category": "ares_modules"
+    },
+    {
+      "id": 8,
+      "question": {
+        "it": "Configurare datasource MySQL iniziale?",
+        "en": "Configure initial MySQL datasource?"
+      },
+      "type": "boolean",
+      "options": [
+        { "text": { "it": "Sì (crea datasource 'main')", "en": "Yes (create 'main' datasource)" }, "value": true, "order": 1 },
+        { "text": { "it": "No, lo farò dopo", "en": "No, I'll do it later" }, "value": false, "order": 2 }
+      ],
+      "is_open_ended": false,
+      "required": true,
+      "category": "datasource"
+    },
+    {
+      "id": 9,
+      "question": {
+        "it": "Dettagli connessione MySQL (se sì sopra)",
+        "en": "MySQL connection details (if yes above)"
+      },
+      "type": "open",
+      "is_open_ended": true,
+      "required": false,
+      "help": {
+        "it": "Formato: host:port/database/user/password. Es: localhost:3306/myapp/root/secret",
+        "en": "Format: host:port/database/user/password. Ex: localhost:3306/myapp/root/secret"
+      },
+      "category": "datasource"
+    },
+    {
+      "id": 10,
+      "question": {
+        "it": "Abilitare AI Bridge per generazione codice/docs?",
+        "en": "Enable AI Bridge for code/docs generation?"
+      },
+      "type": "boolean",
+      "options": [
+        { "text": { "it": "Sì", "en": "Yes" }, "value": true, "order": 1 },
+        { "text": { "it": "No (solo stub offline)", "en": "No (offline stub only)" }, "value": false, "order": 2 }
+      ],
+      "is_open_ended": false,
+      "required": true,
+      "category": "ai"
+    },
+    {
+      "id": 11,
+      "question": {
+        "it": "Provider AI preferito (se AI abilitato)",
+        "en": "Preferred AI provider (if AI enabled)"
+      },
+      "type": "single",
+      "options": [
+        { "text": { "it": "OpenAI (gpt-4o-mini)", "en": "OpenAI (gpt-4o-mini)" }, "value": "openai", "order": 1 },
+        { "text": { "it": "Anthropic (Claude)", "en": "Anthropic (Claude)" }, "value": "anthropic", "order": 2 },
+        { "text": { "it": "Ollama (locale)", "en": "Ollama (local)" }, "value": "ollama", "order": 3 },
+        { "text": { "it": "LiteLLM Proxy", "en": "LiteLLM Proxy" }, "value": "litellm", "order": 4 },
+        { "text": { "it": "Solo stub offline", "en": "Offline stub only" }, "value": "stub", "order": 5 }
+      ],
+      "is_open_ended": false,
+      "required": false,
+      "category": "ai"
+    }
+  ]
+}

@@ -1,0 +1,283 @@
+{
+  "version": "1.0.0",
+  "title": "Questionario inizializzazione modulo aReS SCD",
+  "description": "Raccoglie metadati per generare struttura, documentazione e codice iniziale via AI",
+  "sections": [
+    {
+      "id": "project",
+      "title": "Informazioni Progetto",
+      "description": "Metadati base del modulo/applicazione",
+      "questions": [
+        {
+          "id": "name",
+          "type": "text",
+          "label": "Nome modulo",
+          "placeholder": "es. user-management, api-gateway",
+          "required": true,
+          "help": "Nome breve, kebab-case, usato per directory e package.json"
+        },
+        {
+          "id": "displayName",
+          "type": "text",
+          "label": "Nome visualizzato",
+          "placeholder": "es. User Management, API Gateway",
+          "required": true,
+          "help": "Nome leggibile per UI e documentazione"
+        },
+        {
+          "id": "description",
+          "type": "textarea",
+          "label": "Descrizione",
+          "placeholder": "Breve descrizione dello scopo del modulo",
+          "required": true,
+          "help": "Va in package.json e README"
+        },
+        {
+          "id": "version",
+          "type": "text",
+          "label": "Versione iniziale",
+          "default": "0.1.0",
+          "required": true,
+          "help": "Semantic versioning"
+        },
+        {
+          "id": "author",
+          "type": "text",
+          "label": "Autore",
+          "default": "Roberto Stefani",
+          "required": true
+        },
+        {
+          "id": "license",
+          "type": "select",
+          "label": "Licenza",
+          "options": [
+            { "value": "MIT", "label": "MIT" },
+            { "value": "Apache-2.0", "label": "Apache 2.0" },
+            { "value": "GPL-3.0", "label": "GPL 3.0" },
+            { "value": "BSD-3-Clause", "label": "BSD 3-Clause" },
+            { "value": "UNLICENSED", "label": "Proprietario/Non specificato" }
+          ],
+          "default": "MIT"
+        },
+        {
+          "id": "repository",
+          "type": "text",
+          "label": "URL Repository Git",
+          "placeholder": "https://github.com/user/repo.git",
+          "help": "Opzionale, per package.json"
+        }
+      ]
+    },
+    {
+      "id": "type",
+      "title": "Tipo Modulo",
+      "description": "Definisce la natura e le dipendenze base",
+      "questions": [
+        {
+          "id": "moduleType",
+          "type": "select",
+          "label": "Tipo modulo",
+          "required": true,
+          "options": [
+            { "value": "library", "label": "Libreria (utility, shared code)" },
+            { "value": "service", "label": "Microservizio / API" },
+            { "value": "app", "label": "Applicazione completa (frontend/backend)" },
+            { "value": "cli", "label": "Tool CLI" },
+            { "value": "plugin", "label": "Plugin/Estensione per altro sistema" },
+            { "value": "config", "label": "Solo configurazione / shared config" }
+          ],
+          "help": "Determina struttura directory e dipendenze base"
+        },
+        {
+          "id": "language",
+          "type": "select",
+          "label": "Linguaggio principale",
+          "default": "typescript",
+          "options": [
+            { "value": "typescript", "label": "TypeScript" },
+            { "value": "javascript", "label": "JavaScript (ESM)" }
+          ]
+        },
+        {
+          "id": "runtime",
+          "type": "select",
+          "label": "Runtime target",
+          "default": "node",
+          "options": [
+            { "value": "node", "label": "Node.js" },
+            { "value": "bun", "label": "Bun" },
+            { "value": "deno", "label": "Deno" },
+            { "value": "browser", "label": "Browser" },
+            { "value": "universal", "label": "Universal (Node + Browser)" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "features",
+      "title": "Funzionalità",
+      "description": "Seleziona cosa includere nella generazione iniziale",
+      "questions": [
+        {
+          "id": "hasApi",
+          "type": "boolean",
+          "label": "Include API/HTTP endpoints",
+          "default": false,
+          "help": "Genera router, controller, validazione"
+        },
+        {
+          "id": "hasDatabase",
+          "type": "boolean",
+          "label": "Include database/ORM",
+          "default": false,
+          "help": "Genera modelli, migrazioni, repository"
+        },
+        {
+          "id": "dbType",
+          "type": "select",
+          "label": "Tipo database",
+          "dependsOn": "hasDatabase",
+          "options": [
+            { "value": "postgresql", "label": "PostgreSQL" },
+            { "value": "mysql", "label": "MySQL/MariaDB" },
+            { "value": "sqlite", "label": "SQLite" },
+            { "value": "mongodb", "label": "MongoDB" },
+            { "value": "redis", "label": "Redis (cache/queue)" }
+          ]
+        },
+        {
+          "id": "hasAuth",
+          "type": "boolean",
+          "label": "Include autenticazione/autorizzazione",
+          "default": false
+        },
+        {
+          "id": "hasTesting",
+          "type": "boolean",
+          "label": "Include testing setup",
+          "default": true,
+          "help": "Jest/Vitest, test utils, coverage"
+        },
+        {
+          "id": "testFramework",
+          "type": "select",
+          "label": "Framework test",
+          "dependsOn": "hasTesting",
+          "default": "vitest",
+          "options": [
+            { "value": "vitest", "label": "Vitest" },
+            { "value": "jest", "label": "Jest" },
+            { "value": "node:test", "label": "Node.js built-in" }
+          ]
+        },
+        {
+          "id": "hasLinting",
+          "type": "boolean",
+          "label": "Include ESLint/Prettier",
+          "default": true
+        },
+        {
+          "id": "hasCI",
+          "type": "boolean",
+          "label": "Include CI/CD pipeline",
+          "default": false,
+          "help": "GitHub Actions / GitLab CI"
+        },
+        {
+          "id": "hasDocker",
+          "type": "boolean",
+          "label": "Include Dockerfile",
+          "default": false
+        },
+        {
+          "id": "hasDocs",
+          "type": "boolean",
+          "label": "Genera documentazione iniziale",
+          "default": true,
+          "help": "README, API docs, CONTRIBUTING"
+        }
+      ]
+    },
+    {
+      "id": "architecture",
+      "title": "Architettura",
+      "description": "Pattern e convenzioni architetturali",
+      "questions": [
+        {
+          "id": "pattern",
+          "type": "select",
+          "label": "Pattern architetturale",
+          "default": "modular",
+          "options": [
+            { "value": "modular", "label": "Modular (feature-based)" },
+            { "value": "layered", "label": "Layered (controller/service/repository)" },
+            { "value": "clean", "label": "Clean Architecture" },
+            { "value": "hexagonal", "label": "Hexagonal / Ports & Adapters" },
+            { "value": "cqrs", "label": "CQRS / Event Sourcing" }
+          ]
+        },
+        {
+          "id": "codeStyle",
+          "type": "select",
+          "label": "Code style",
+          "default": "functional",
+          "options": [
+            { "value": "functional", "label": "Functional (immutability, pure functions)" },
+            { "value": "oop", "label": "OOP (classes, inheritance)" },
+            { "value": "mixed", "label": "Mixed (pragmatic)" }
+          ]
+        },
+        {
+          "id": "apiStyle",
+          "type": "select",
+          "label": "Stile API (se hasApi)",
+          "dependsOn": "hasApi",
+          "default": "rest",
+          "options": [
+            { "value": "rest", "label": "REST" },
+            { "value": "graphql", "label": "GraphQL" },
+            { "value": "grpc", "label": "gRPC" },
+            { "value": "trpc", "label": "tRPC" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ai",
+      "title": "Configurazione AI",
+      "description": "Per generazione automatica via ai-3rd-party",
+      "questions": [
+        {
+          "id": "generateCode",
+          "type": "boolean",
+          "label": "Genera codice iniziale via AI",
+          "default": true
+        },
+        {
+          "id": "generateDocs",
+          "type": "boolean",
+          "label": "Genera documentazione via AI",
+          "default": true
+        },
+        {
+          "id": "generateTests",
+          "type": "boolean",
+          "label": "Genera test via AI",
+          "default": false
+        },
+        {
+          "id": "aiProvider",
+          "type": "select",
+          "label": "Provider AI preferito",
+          "default": "opencode",
+          "options": [
+            { "value": "opencode", "label": "OpenCode (locale)" },
+            { "value": "openai", "label": "OpenAI (gpt-4o-mini)" },
+            { "value": "aider", "label": "Aider" }
+          ]
+        }
+      ]
+    }
+  ]
+}

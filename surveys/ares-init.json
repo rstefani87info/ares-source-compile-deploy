@@ -1,0 +1,130 @@
+{
+  "version": "1.0",
+  "title": {
+    "it": "Questionario Iniziale Applicazione aReS",
+    "en": "aReS Application Initial Questionnaire"
+  },
+  "introduction": {
+    "it": "Benvenuto! Questo questionario aiuta a configurare la tua nuova applicazione aReS. Rispondi alle domande per generare la struttura iniziale.",
+    "en": "Welcome! This questionnaire helps configure your new aReS application. Answer the questions to generate the initial structure."
+  },
+  "conclusion": {
+    "it": "Grazie! La configurazione verrà generata in base alle tue risposte.",
+    "en": "Thank you! The configuration will be generated based on your answers."
+  },
+  "settings": {
+    "shuffle_questions": false,
+    "shuffle_options": false,
+    "show_progress": true,
+    "allow_back": true
+  },
+  "metadata": {
+    "author": "aReS Framework",
+    "created": "2026-08-29T00:00:00.000Z",
+    "tags": ["ares", "init", "application", "module"]
+  },
+  "questions": [
+    {
+      "id": 1,
+      "question": {
+        "it": "Che tipo di progetto stai creando?",
+        "en": "What type of project are you creating?"
+      },
+      "type": "single",
+      "options": [
+        { "text": { "it": "Applicazione completa", "en": "Full Application" }, "value": "full_app", "order": 1 },
+        { "text": { "it": "Modulo/Libreria", "en": "Module/Library" }, "value": "module", "order": 2 },
+        { "text": { "it": "Microservizio", "en": "Microservice" }, "value": "microservice", "order": 3 },
+        { "text": { "it": "CLI Tool", "en": "CLI Tool" }, "value": "cli", "order": 4 }
+      ],
+      "is_open_ended": false,
+      "required": true,
+      "category": "project_type"
+    },
+    {
+      "id": 2,
+      "question": {
+        "it": "Quale database userai?",
+        "en": "Which database will you use?"
+      },
+      "type": "single",
+      "options": [
+        { "text": { "it": "MySQL", "en": "MySQL" }, "value": "mysql", "order": 1 },
+        { "text": { "it": "PostgreSQL", "en": "PostgreSQL" }, "value": "postgresql", "order": 2 },
+        { "text": { "it": "MongoDB", "en": "MongoDB" }, "value": "mongodb", "order": 3 },
+        { "text": { "it": "SQLite", "en": "SQLite" }, "value": "sqlite", "order": 4 },
+        { "text": { "it": "Nessuno/Solo file", "en": "None/File only" }, "value": "none", "order": 5 }
+      ],
+      "is_open_ended": false,
+      "required": true,
+      "category": "database"
+    },
+    {
+      "id": 3,
+      "question": {
+        "it": "Quali funzionalità core ti servono?",
+        "en": "Which core features do you need?"
+      },
+      "type": "multiple",
+      "options": [
+        { "text": { "it": "Autenticazione/Autorizzazione", "en": "Authentication/Authorization" }, "value": "auth", "order": 1 },
+        { "text": { "it": "API REST", "en": "REST API" }, "value": "rest_api", "order": 2 },
+        { "text": { "it": "GraphQL", "en": "GraphQL" }, "value": "graphql", "order": 3 },
+        { "text": { "it": "WebSocket/Real-time", "en": "WebSocket/Real-time" }, "value": "websocket", "order": 4 },
+        { "text": { "it": "Job/Queue system", "en": "Job/Queue system" }, "value": "jobs", "order": 5 },
+        { "text": { "it": "Cache (Redis)", "en": "Cache (Redis)" }, "value": "cache", "order": 6 },
+        { "text": { "it": "File Storage", "en": "File Storage" }, "value": "storage", "order": 7 }
+      ],
+      "is_open_ended": false,
+      "required": false,
+      "category": "features"
+    },
+    {
+      "id": 4,
+      "question": {
+        "it": "Userai TypeScript?",
+        "en": "Will you use TypeScript?"
+      },
+      "type": "boolean",
+      "options": [
+        { "text": { "it": "Sì", "en": "Yes" }, "value": true, "order": 1 },
+        { "text": { "it": "No", "en": "No" }, "value": false, "order": 2 }
+      ],
+      "is_open_ended": false,
+      "required": true,
+      "category": "tech_stack"
+    },
+    {
+      "id": 5,
+      "question": {
+        "it": "Quale framework di test preferisci?",
+        "en": "Which testing framework do you prefer?"
+      },
+      "type": "single",
+      "options": [
+        { "text": { "it": "Vitest", "en": "Vitest" }, "value": "vitest", "order": 1 },
+        { "text": { "it": "Jest", "en": "Jest" }, "value": "jest", "order": 2 },
+        { "text": { "it": "Mocha", "en": "Mocha" }, "value": "mocha", "order": 3 },
+        { "text": { "it": "Node test nativo", "en": "Node native test" }, "value": "node_test", "order": 4 }
+      ],
+      "is_open_ended": false,
+      "required": true,
+      "category": "testing"
+    },
+    {
+      "id": 6,
+      "question": {
+        "it": "Ci sono requisiti specifici o note aggiuntive?",
+        "en": "Any specific requirements or additional notes?"
+      },
+      "type": "open",
+      "is_open_ended": true,
+      "required": false,
+      "help": {
+        "it": "Descrivi liberamente requisiti particolari, integrazioni, vincoli...",
+        "en": "Describe any special requirements, integrations, constraints..."
+      },
+      "category": "notes"
+    }
+  ]
+}
