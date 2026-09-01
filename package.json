@@ -23,12 +23,15 @@
     "./git-flow.js": "./git-flow.js",
     "./programming": "./programming.js",
     "./programming.js": "./programming.js",
+    "./job-output": "./src/job-output.js",
+    "./job-output.js": "./src/job-output.js",
     "./cli": "./cli.js",
     "./cli.js": "./cli.js",
     "./package.json": "./package.json"
   },
   "scripts": {
-    "test": "node --test ./test/*.test.js"
+    "test": "node --test ./test/*.test.js",
+    "ares-scd": "ares-scd"
   },
   "keywords": [
     "source",

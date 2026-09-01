@@ -16,3 +16,18 @@ CLI:
 ```bash
 ares-scd help
 ```
+
+## Documentazione
+
+### English
+- [Documentation Index](./.ares/docs/en/index.md)
+- [SCD](./.ares/docs/en/scd.md)
+
+### Italiano
+- [Indice Documentazione](./.ares/docs/it/index.md)
+- [SCD](./.ares/docs/it/scd.md)
+
+## Task / Ticket
+
+- [Tasks](./.ares/tasks/README.md) (cartella canonica)
+- [Ticket Fase 3 – contratto toolchain](./.ares/tasks/20260819-phase3-toolchain-contract.md)

@@ -249,4 +249,34 @@ export class Repository {
     if (!message) throw new Error("Commit message is required");
     return this.git(["commit", "--amend", "-m", message]);
   }
+
+  addRemote(name, url) {
+    return this.git(["remote", "add", name, url]);
+  }
+
+  async initOrClone(targetDir, remoteUrl, branch = "master") {
+    const fs = await import("fs");
+    const hasGit = fs.existsSync(targetDir + "/.git");
+
+    if (hasGit) {
+      await this.git(["fetch"], { cwd: targetDir });
+      await this.git(["checkout", branch], { cwd: targetDir });
+      await this.git(["pull"], { cwd: targetDir });
+      return { action: "updated", path: targetDir };
+    }
+
+    if (fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true });
+      await this.git(["init", targetDir], { cwd: process.cwd() });
+      const repo = new Repository(this.name, targetDir);
+      await repo.addRemote("origin", remoteUrl);
+      await repo.git(["fetch"]);
+      await repo.git(["checkout", branch]);
+      await repo.git(["pull"]);
+      return { action: "initialized", path: targetDir };
+    }
+
+    await this.git(["clone", remoteUrl, targetDir], { cwd: process.cwd() });
+    return { action: "cloned", path: targetDir };
+  }
 }

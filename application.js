@@ -1,12 +1,12 @@
-import fs from "fs";
 import path from "path";
+import { fileExists, createDirectory } from "@ares/files";
 
 function readPackageMetadata(directoryPath) {
   const packageJsonPath = path.join(directoryPath, "package.json");
-  if (!fs.existsSync(packageJsonPath)) return {};
+  if (!fileExists(packageJsonPath)) return {};
 
   try {
-    return JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+    return JSON.parse(getFileContent(packageJsonPath, "utf8"));
   } catch {
     return {};
   }
@@ -27,7 +27,8 @@ export class Application {
     git = null,
     flow = null,
     userSettings = {},
-    endPoint = ""
+    endPoint = "",
+    ganttPath = path.join(basePath, ".ares", "gantt")
   ) {
     if (!name) throw new Error("Application name is required");
     if (!version) throw new Error("Application version is required");
@@ -40,6 +41,7 @@ export class Application {
     this.librariesPath = librariesPath;
     this.buildingPath = buildingPath;
     this.documentationPath = documentationPath;
+    this.ganttPath = ganttPath;
     this.author = author;
     this.description = description;
     this.url = url;
@@ -60,8 +62,9 @@ export class Application {
       this.librariesPath,
       this.buildingPath,
       this.documentationPath,
+      this.ganttPath,
     ]) {
-      fs.mkdirSync(directory, { recursive: true });
+      createDirectory(directory, true);
     }
     return true;
   }
@@ -104,7 +107,7 @@ export class Application {
   }
 
   static scan(directoryPath) {
-    if (!fs.existsSync(directoryPath)) {
+    if (!fileExists(directoryPath)) {
       throw new Error(`Directory does not exist: ${directoryPath}`);
     }
 
@@ -129,11 +132,15 @@ export class Application {
       path.join(basePath, "src"),
       path.join(basePath, "lib"),
       path.join(basePath, "build"),
-      path.join(basePath, "docs"),
+      path.join(basePath, ".ares", "docs"),
       packageJson.author ?? "",
       packageJson.description ?? "",
       packageJson.homepage ?? "",
-      git
+      git,
+      null,
+      {},
+      "",
+      path.join(basePath, ".ares", "gantt")
     );
   }
 }
